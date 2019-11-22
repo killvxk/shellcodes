@@ -13,12 +13,12 @@ CFLAGS  := -Os -O2 -ffunction-sections -fno-asynchronous-unwind-tables -nostdlib
 INCS    := -Iinclude -Iinclude/subhook
 LFLAGS  := -Wl,-s,--no-seh,-Tinclude/linked.x64.ld
 
-all: payload.exe payload.bin
+all: payload.x64.exe payload.x64.bin
 
-payload.bin:
-	python2.7 pedump.py 
+payload.x64.bin:
+	python2.7 pedump.py payload.x64.exe $@
 
-payload.exe: $(OBJS) src/StackAdjust.o
+payload.x64.exe: $(OBJS) src/StackAdjust.o
 	$(CC) -o $@ $^ $(INCS) $(CFLAGS) $(LFLAGS)
 
 .c.o:
@@ -28,4 +28,4 @@ src/StackAdjust.o: src/StackAdjust.asm
 	nasm -f win64 $< -o $@
 
 clean:
-	rm -rf $(OBJS) payload.exe payload.bin src/StackAdjust.o
+	rm -rf $(OBJS) payload.x64.exe payload.x64.bin src/StackAdjust.o

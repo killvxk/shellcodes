@@ -3,7 +3,7 @@ SECTIONS
 {
 	text : 
 	{
-		*(.text.WindowsEntrypoint):
+		*(.text.WindowsEntrypoint)
 		*(.text.GetPeBase)
 		*(.text.GetPeFunc)
 		*(.text.GetStringHashDjb2)
