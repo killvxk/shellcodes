@@ -1,0 +1,26 @@
+#
+# Builds:
+#	pe_util.c hs_util.c main.c (x86)
+#
+# Property of GuidePoint Security LLC, Threat & Attack Simulation Team
+#
+CC      := i686-w64-mingw32-gcc
+SRCS    := $(wildcard src/*.c)
+OBJS    := $(SRCS:%.c=%.o)
+CFLAGS  := -O3 -ffunction-sections -fno-asynchronous-unwind-tables -nostdlib -fno-ident -falign-functions
+INCS    := -Iinclude -Iinclude/subhook
+LFLAGS  := -Wl,-s,--no-seh,-Tinclude/linked.x86.ld
+
+all: payload.x86.exe payload.x86.bin
+
+payload.x86.bin:
+	python2.7 pedump.py payload.x86.exe $@
+
+payload.x86.exe: $(OBJS) 
+	$(CC) -o $@ $^ $(INCS) $(CFLAGS) $(LFLAGS)
+
+.c.o:
+	$(CC) -o $@ -c $< $(INCS) $(CFLAGS)
+
+clean:
+	rm -rf $(OBJS) payload.x86.exe payload.x86.bin 
