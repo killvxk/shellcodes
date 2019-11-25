@@ -26,17 +26,4 @@
 #ifndef _WINAPI_H
 #define _WINAPI_H
 
-typedef UINT (WINAPI * FuncWinExec)(
-	LPCSTR lpCmdLine,
-	UINT uCmdShow
-);
-
-/*
- * FuncDispatchTable():
- *	WinExec - Pointer to kernel32!WinExec
-*/
-struct FuncDispatchTable {
-	FuncWinExec WinExec;
-};
-
 #endif

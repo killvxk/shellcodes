@@ -26,7 +26,4 @@
 #ifndef _HASHES_H
 #define _HASHES_H
 
-#define FUNC_HASH_WINEXEC  0x8f199183
-#define BASE_HASH_KERNEL32 0xf2bc534c
-
 #endif
