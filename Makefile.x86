@@ -6,8 +6,6 @@
 #
 CC      := i686-w64-mingw32-gcc
 SRCS    := $(wildcard src/*.c)
-#EXTSRC := $(wildcard third-party/*.c)
-#OBJS   := $(SRCS:%.c=%.o) $(EXTSRC:%.c=%.o)
 OBJS    := $(SRCS:%.c=%.o)
 CFLAGS  := -O3 -ffunction-sections -fno-asynchronous-unwind-tables -nostdlib -fno-ident -falign-functions
 INCS    := -Iinclude -Iinclude/subhook
