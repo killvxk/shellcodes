@@ -28,13 +28,11 @@
 #include "winapi.h"
 #include "hashes.h"
 
-INT WindowsEntrypoint()
+VOID WindowsEntrypoint()
 {
   struct Functions Func = { 0 };
   struct Drivers   Drvs = { 0 };
 
-  Drvs.SrvSmbv1Base = GetPeBase(HASH_SRVSMBV1);
-  Drvs.NtosKrnlBase = GetPeBase(HASH_NTOSKRNL);
-
-  return 0;
+  Drvs.NtosKrnlBase     = \
+	GetPeBase(HASH_NTOSKRNL);
 };

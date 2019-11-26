@@ -23,11 +23,16 @@
 ; SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 extern WindowsEntrypoint
+extern shellcode_start
 global StackAlign
+global StackFinish
 
 segment .text
 
 StackAlign:
+	call shellcode_start
+
+StackFinish:
 	push rsi
 	mov rsi, rsp
 	and rsp, 0FFFFFFFFFFFFFFF0h
