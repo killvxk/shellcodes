@@ -49,35 +49,31 @@ typedef enum _POOL_TYPE
   NonPagedPoolCacheAlignedMustSSession = 38,
 } POOL_TYPE, *PPOOL_TYPE;
 
-typedef struct _SYSTEM_MODULE_INFORMATION_ENTRY
+typedef struct _SYSTEM_MODULE_ENTRY
 {
-    ULONG  Unknown1;
-    ULONG  Unknown2;
-#ifdef _WIN64
-        ULONG Unknown3;
-        ULONG Unknown4;
-#endif
-    PVOID  Base;
-    ULONG  Size;
-    ULONG  Flags;
-    USHORT  Index;
-    USHORT  NameLength;
-    USHORT  LoadCount;
-    USHORT  PathLength;
-    CHAR  ImageName[256];
-} SYSTEM_MODULE_INFORMATION_ENTRY, *PSYSTEM_MODULE_INFORMATION_ENTRY;
+	HANDLE Section;
+	PVOID MappedBase;
+	PVOID ImageBase;
+	ULONG ImageSize;
+	ULONG Flags;
+	USHORT LoadOrderIndex;
+	USHORT InitOrderIndex;
+	USHORT LoadCount;
+	USHORT OffsetToFileName;
+	UCHAR FullPathName[256];
+} SYSTEM_MODULE_ENTRY, * PSYSTEM_MODULE_ENTRY;
 
 typedef struct _SYSTEM_MODULE_INFORMATION
 {
-    ULONG Count;
-    SYSTEM_MODULE_INFORMATION_ENTRY Module[1];
-} SYSTEM_MODULE_INFORMATION, *PSYSTEM_MODULE_INFORMATION;
+	ULONG Count;
+	SYSTEM_MODULE_ENTRY Module[1];
+} SYSTEM_MODULE_INFORMATION, * PSYSTEM_MODULE_INFORMATION;
 
 //
 // ntoskrnl.exe!ZwQuerySystemInformation
 //
 typedef NTSTATUS (NTAPI *ZwQuerySystemInformation_t)(
-  BYTE  SystemInformationClass,
+  INT SystemInformationClass,
   PVOID SystemInformation,
   ULONG SystemInformationLength,
   PULONG ReturnLength

@@ -25,13 +25,14 @@
 */
 #ifndef _HASHES_H
 #define _HASHES_H
-#define HASH_ZWQUERYSYSTEMINFORMATION 0x8254a40e
-#define HASH_EXALLOCATEPOOL           0x4645040c
-#define HASH_EXFREEPOOL               0x8645040c
-#define HASH_KEGETCURRENTIRQL         0xd529348c
-#define HASH_KELOWERIRQL              0x9329348c
 
-#define HASH_SRVSMBV1                 0xd6bd4693
-#define HASH_NTOSKRNL                 0xccbc6645
+#define HASH_ZWQUERYSYSTEMINFORMATION 0x2c3dde04
+#define HASH_EXALLOCATEPOOL           0xa5315eae
+#define HASH_EXFREEPOOL               0xa8773b2b
+#define HASH_KEGETCURRENTIRQL         0x894b123d
+#define HASH_KELOWERIRQL              0xeaa07c03
+
+#define HASH_SRVSMBV1                 0x4c76fe1d
+#define HASH_NTOSKRNL                 0x7bda239a
 
 #endif

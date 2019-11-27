@@ -1,9 +1,9 @@
-ENTRY(shellcode_start)
+ENTRY(StackAlign)
 SECTIONS
 {
 	.text :
 	{
-		*(.text.shellcode_start)
+		*(.text.StackAlign)
 		*(.text)
 	}
 }

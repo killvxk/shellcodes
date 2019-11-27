@@ -102,12 +102,18 @@ PVOID GetPeBase(DWORD DrvHsh)
   struct Functions           FuncTable   = { 0 };
   ULONG                      StructSize  = 0;
   DWORD                      StringHsh   = 0;
+  PSYSTEM_MODULE_INFORMATION SystemInf   = 0;
+  PSYSTEM_MODULE_ENTRY       SystemEnt   = 0;
+  ULONG64                    ModuleBase  = 0;
 
   InterruptEntryPtr = (PVOID)(((ULONG_PTR)InterruptEntryPtr) &~ 0xfff);
   while ( (*(UINT16 *)InterruptEntryPtr) != IMAGE_DOS_SIGNATURE )
   {
     InterruptEntryPtr = (PVOID)(((ULONG_PTR)InterruptEntryPtr) - 0x1000);
   };
+
+  if ( DrvHsh == HASH_NTOSKRNL )
+    return InterruptEntryPtr;
 
   /**
    * For kernel-mode functionality to work properly,
@@ -127,17 +133,33 @@ PVOID GetPeBase(DWORD DrvHsh)
     GetPeFunc(InterruptEntryPtr, HASH_EXALLOCATEPOOL);
   FuncTable.ExFreePool =
     GetPeFunc(InterruptEntryPtr, HASH_EXFREEPOOL);
-  FuncTable.KeGetCurrentIrql = 
-    GetPeFunc(InterruptEntryPtr, HASH_KEGETCURRENTIRQL);
-  FuncTable.KeLowerIrql      =
-    GetPeFunc(InterruptEntryPtr, HASH_KELOWERIRQL);
 
-  if ( FuncTable.KeGetCurrentIrql() == 0 )
+  FuncTable.ZwQuerySystemInformation(0xb, &StructSize, 0, &StructSize);
+  SystemInf = FuncTable.ExAllocatePool(PagedPool, StructSize);
+  FuncTable.ZwQuerySystemInformation(0xb, SystemInf, StructSize, 0);
+
+  SystemEnt = SystemInf->Module;
+  for ( int i = 0 ; i < SystemInf->Count ; i++ )
   {
-    if (
-      FuncTable.ZwQuerySystemInformation(0x0b, &StructSize, 0, &StructSize) != STATUS_ACCESS_VIOLATION )
-    { __debugbreak(); };
+    StringHsh = HashStringDjb2((PCHAR)(
+      SystemEnt[i].FullPathName + SystemEnt[i].OffsetToFileName), 0);
+    if ( StringHsh == DrvHsh )
+#if defined(_M_X64) 
+      ModuleBase = (ULONG64)SystemEnt[i].ImageBase;
+#else
+      ModuleBase = (ULONG32)SystemEnt[i].ImageBase;
+#endif
   };
+
+  SystemEnt = NULL;
+  if ( SystemInf != NULL )
+    FuncTable.ExFreePool(SystemInf);
+
+  FuncTable.ZwQuerySystemInformation = NULL;
+  FuncTable.ExAllocatePool           = NULL;
+  FuncTable.ExFreePool               = NULL;
+
+  return (void *)ModuleBase;
 };
 #else
 #error Please supply either _KM_UTILS or _UM_UTILS.
