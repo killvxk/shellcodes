@@ -63,17 +63,19 @@ PVOID GetPeBase(DWORD ModHsh)
 
 PVOID GetPeFunc(PVOID ModPtr, DWORD FunHsh)
 {
-  PIMAGE_DOS_HEADER       DosHdr = 0;
-  PIMAGE_NT_HEADERS       NtsHdr = 0;
-  PIMAGE_EXPORT_DIRECTORY ExpHdr = 0;
-  DWORD                   StrHsh = 0;
-  PDWORD                  StrOff = 0;
-  PDWORD                  FunOff = 0;
-  PCHAR                   StrPln = 0;
-  PUSHORT                 OrdOff = 0;
+  PIMAGE_DOS_HEADER        DosHdr = 0;
+  PIMAGE_NT_HEADERS        NtsHdr = 0;
+  PIMAGE_EXPORT_DIRECTORY  ExpHdr = 0;
+  PIMAGE_IMPORT_DESCRIPTOR ImpHdr = 0;
+  DWORD                    StrHsh = 0;
+  PDWORD                   StrOff = 0;
+  PDWORD                   FunOff = 0;
+  PCHAR                    StrPln = 0;
+  PUSHORT                  OrdOff = 0;
 
   DosHdr = (PIMAGE_DOS_HEADER)ModPtr;
   NtsHdr = (PIMAGE_NT_HEADERS)(((ULONG_PTR)ModPtr) + DosHdr->e_lfanew);
+#ifndef _EAF_BYPASS
   ExpHdr = (PIMAGE_EXPORT_DIRECTORY)
   (((ULONG_PTR)ModPtr) + NtsHdr->OptionalHeader.DataDirectory[0].VirtualAddress);
 
@@ -94,5 +96,15 @@ PVOID GetPeFunc(PVOID ModPtr, DWORD FunHsh)
     if ( StrHsh == FunHsh )
       return (PVOID)(((ULONG_PTR)ModPtr) + FunOff[OrdOff[i]]);
   };
+#else
+  ImpHdr = (PIMAGE_IMPORT_DIRECTORY)
+  (((ULONG_PTR)ModPtr) + NtsHdr->OptionalHeader.DataDirectory[1].VirtualAddress);
+  for ( ; ImpHdr->Name != '\0' ; ImpHdr++ )
+  {
+    /*
+     * We parse the im
+     */
+  };
+#endif
   return NULL;
 };

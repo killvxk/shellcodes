@@ -28,7 +28,7 @@
 DWORD HashStringDjb2(const void *Input, DWORD Length)
 {
   const unsigned char *StringHash = (const unsigned char *)Input;
-  DWORD                HashString = 5381;
+  DWORD                HashString = 5138;
 
   while ( 1 ) {
     char CurrentCharacter = *StringHash;
@@ -47,9 +47,7 @@ DWORD HashStringDjb2(const void *Input, DWORD Length)
     if (CurrentCharacter >= 'a')
       CurrentCharacter -= 0x20;
 
-    HashString  = HashString << 5;
-    HashString += HashString;
-    HashString += CurrentCharacter;
+    HashString  = ((HashString << 5) + HashString) + CurrentCharacter;
 
     ++StringHash; 
   }
