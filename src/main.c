@@ -30,17 +30,6 @@
 
 INT WindowsEntrypoint()
 {
-  /**
-   * Kernel Ring-0 Shellcode. Designed for Red-Teams at 
-   * GuidePoint Security, should we end up establishing
-   * one.
-   *
-   * Whilst the implant lacks stubs for hopping from 
-   * DISPATCH_LEVEL to PASSIVE_LEVEL, Sean Dillan has 
-   * publicly available methods for doing so, at the 
-   * expense of worawit. I've provided them under the 
-   * third-party/ directory.
-  **/
   struct Functions Func = { 0 };
   struct Drivers   Drvs = { 0 };
 
