@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019 Mumbai
+ * Copyright (c) 2019 Austin Hudson
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -29,7 +29,6 @@
 #include "hs_util.h"
 #include "pe_util.h"
 
-#if defined(_UM_UTILS)
 PVOID GetPeBase(DWORD ModHsh)
 {
 #if defined(_M_X64) || defined(_WIN64)
@@ -49,13 +48,6 @@ PVOID GetPeBase(DWORD ModHsh)
 
   for ( ; LstHdr != LstEnt ; LstEnt = LstEnt->Flink )
   {
-   /*
-    * We hash the string using the modified Djb2
-    * hashing algorithm (supports unicode / ascii)
-    *
-    * Afterwards, we compare the result with the 
-    * requested hash.
-    */
     LdrEnt = (PLDR_DATA_TABLE_ENTRY_CUSTOM)LstEnt;
     StrHsh = HashStringDjb2(LdrEnt->BaseDllName.Buffer, LdrEnt->BaseDllName.Length);
     if ( StrHsh == ModHsh ) {
@@ -64,102 +56,6 @@ PVOID GetPeBase(DWORD ModHsh)
   };
   return NULL;
 };
-#elif defined(_KM_UTILS)
-#include "hashes.h"
-#include "winapi.h"
-PVOID GetPeBase(DWORD DrvHsh)
-{
-#if defined(_M_X64) || defined(_WIN64)
-  PKPCR PcrPtr = (PKPCR)__readgsqword(FIELD_OFFSET(KPCR, SelfPcr));
-
-  unsigned short InterruptEntryLow = 0;
-  unsigned short InterruptEntryMid = 0;
-  unsigned long  InterruptEntryTop = 0;
-  void          *InterruptEntryPtr = 0;
-
-  InterruptEntryLow = PcrPtr->IdtBase->OffsetLow;
-  InterruptEntryMid = PcrPtr->IdtBase->OffsetMiddle;
-  InterruptEntryTop = PcrPtr->IdtBase->OffsetHigh;
-
-  InterruptEntryPtr  = (PVOID)(
-    ((ULONG64)InterruptEntryTop << 32) +
-    ((ULONG32)InterruptEntryMid << 16) +
-    InterruptEntryLow);
-#else
-  PKPCR PcrPtr = (PKPCR)__readfsdword(FIELD_OFFSET(KPCR, SelfPcr));
-
-  unsigned short InterruptEntryLow = 0;
-  unsigned short InterruptEntryTop = 0;
-  void          *InterruptEntryPtr = 0;
-
-  InterruptEntryLow = PcrPtr->IDT->Offset;
-  InterruptEntryTop = PcrPtr->IDT->ExtendedOffset;
-
-  InterruptEntryPtr = (PVOID)(
-    ((ULONG32)InterruptEntryTop << 16) +
-    InterruptEntryLow);
-#endif
-  struct Functions           FuncTable   = { 0 };
-  ULONG                      StructSize  = 0;
-  DWORD                      StringHsh   = 0;
-  PSYSTEM_MODULE_INFORMATION SystemInf   = 0;
-  PSYSTEM_MODULE_ENTRY       SystemEnt   = 0;
-  ULONG_PTR                  ModuleBase  = 0;
-
-  InterruptEntryPtr = (PVOID)(((ULONG_PTR)InterruptEntryPtr) &~ 0xfff);
-  while ( (*(UINT16 *)InterruptEntryPtr) != IMAGE_DOS_SIGNATURE )
-  {
-    InterruptEntryPtr = (PVOID)(((ULONG_PTR)InterruptEntryPtr) - 0x1000);
-  };
-
-  if ( DrvHsh == HASH_NTOSKRNL )
-    return InterruptEntryPtr;
-
-  /**
-   * For kernel-mode functionality to work properly,
-   * we have to search for the following functions
-   * using GetPeFunc():
-   *
-   *  1) ZwQuerySystemInformation();
-   *  2) ExAllocatePool();
-   *  3) ExFreePool();
-   *
-   * Furthermore - InterruptEntryPtr is actuall the 
-   * base address of ntoskrnl.exe - so ... yeah. 
-  **/
-  FuncTable.ZwQuerySystemInformation = 
-    GetPeFunc(InterruptEntryPtr, HASH_ZWQUERYSYSTEMINFORMATION);
-  FuncTable.ExAllocatePool = 
-    GetPeFunc(InterruptEntryPtr, HASH_EXALLOCATEPOOL);
-  FuncTable.ExFreePool =
-    GetPeFunc(InterruptEntryPtr, HASH_EXFREEPOOL);
-
-  FuncTable.ZwQuerySystemInformation(0xb, &StructSize, 0, &StructSize);
-  SystemInf = FuncTable.ExAllocatePool(PagedPool, StructSize);
-  FuncTable.ZwQuerySystemInformation(0xb, SystemInf, StructSize, 0);
-
-  SystemEnt = SystemInf->Module;
-  for ( int i = 0 ; i < SystemInf->Count ; i++ )
-  {
-    StringHsh = HashStringDjb2((PCHAR)(
-      SystemEnt[i].FullPathName + SystemEnt[i].OffsetToFileName), 0);
-    if ( StringHsh == DrvHsh )
-      ModuleBase = (ULONG_PTR)SystemEnt[i].ImageBase;
-  };
-
-  SystemEnt = NULL;
-  if ( SystemInf != NULL )
-    FuncTable.ExFreePool(SystemInf);
-
-  FuncTable.ZwQuerySystemInformation = NULL;
-  FuncTable.ExAllocatePool           = NULL;
-  FuncTable.ExFreePool               = NULL;
-
-  return (PVOID)ModuleBase;
-};
-#else
-#error Please supply either _KM_UTILS or _UM_UTILS.
-#endif
 
 PVOID GetPeFunc(PVOID ModPtr, DWORD FunHsh)
 {
@@ -182,40 +78,10 @@ PVOID GetPeFunc(PVOID ModPtr, DWORD FunHsh)
   OrdOff = (PUSHORT)(((ULONG_PTR)ModPtr) + ExpHdr->AddressOfNameOrdinals);
   for ( int i = 0 ; i < ExpHdr->NumberOfNames ; i++ )
   {
-    /*
-     * We parse each individual export name until we 
-     * reach the one we requested.
-     *
-     * if we find the requested module, we return it
-     * back to be parsed by the requestee.
-    */
     StrPln = (PCHAR)(((ULONG_PTR)ModPtr) + StrOff[i]);
     StrHsh = HashStringDjb2(StrPln, 0);
     if ( StrHsh == FunHsh )
       return (PVOID)(((ULONG_PTR)ModPtr) + FunOff[OrdOff[i]]);
   };
-  return NULL;
-};
-
-PVOID GetPeSect(PVOID ModPtr, DWORD SecHsh)
-{
-  PIMAGE_DOS_HEADER     DosHdr = 0;
-  PIMAGE_NT_HEADERS     NtsHdr = 0;
-  PIMAGE_SECTION_HEADER SecHdr = 0;
-  DWORD                 StrHsh = 0;
-             
-  DosHdr = (PIMAGE_DOS_HEADER)ModPtr;
-  NtsHdr = (PIMAGE_NT_HEADERS)
-    (((ULONG_PTR)ModPtr) + DosHdr->e_lfanew);
-  SecHdr = IMAGE_FIRST_SECTION(NtsHdr);
-
-  for ( int i = 0 ; i < NtsHdr->FileHeader.NumberOfSections ; i++ )
-  {
-    StrHsh = HashStringDjb2(&SecHdr[i].Name, 0);
-    if ( StrHsh == SecHsh ) {
-      return (PVOID)(((ULONG_PTR)ModPtr) + SecHdr[i].VirtualAddress);
-    };
-  };
-
   return NULL;
 };
